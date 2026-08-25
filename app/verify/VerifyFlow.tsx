@@ -43,8 +43,8 @@ export default function VerifyFlow({ token, discordUserId, guildId }: VerifyFlow
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState("");
 
-  const handleTurnstileSuccess = async (token: string) => {
-    setTurnstileToken(token);
+  const handleTurnstileSuccess = async (turnstileTokenValue: string) => {
+    setTurnstileToken(turnstileTokenValue);
     setIsVerifying(true);
     setError("");
 
@@ -52,7 +52,7 @@ export default function VerifyFlow({ token, discordUserId, guildId }: VerifyFlow
       const res = await fetch("/api/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, turnstileToken: token }),
+        body: JSON.stringify({ token, turnstileToken: turnstileTokenValue }),
       });
 
       if (!res.ok) {
