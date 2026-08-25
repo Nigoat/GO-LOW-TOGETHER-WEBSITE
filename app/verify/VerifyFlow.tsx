@@ -183,7 +183,7 @@ export default function VerifyFlow({ token, discordUserId, guildId }: VerifyFlow
             onClick={handleLanguagesSubmit}
             disabled={selectedLanguages.length === 0}
             className="w-full mt-6 p-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: selectedLanguages.length > 0 ? "#ffffff" : "#333333" }}
+            style={{ backgroundColor: selectedLanguages.length > 0 ? "#ffffff" : "#333333", color: selectedLanguages.length > 0 ? "#000000" : "#888888" }}
           >
             Continue
           </button>
