@@ -35,10 +35,6 @@ export async function POST(request: NextRequest) {
           INSERT INTO pending_role_updates (discord_user_id, guild_id, role_id, action)
           VALUES (${discordUserId}, ${guildId}, ${roleId}, 'add')
         `;
-        await sql`
-          INSERT INTO user_roles (discord_user_id, role_id, role_type)
-          VALUES (${discordUserId}, ${roleId}, 'language')
-        `;
       }
     }
 
@@ -48,10 +44,6 @@ export async function POST(request: NextRequest) {
       await sql`
         INSERT INTO pending_role_updates (discord_user_id, guild_id, role_id, action)
         VALUES (${discordUserId}, ${guildId}, ${skillRoleId}, 'add')
-      `;
-      await sql`
-        INSERT INTO user_roles (discord_user_id, role_id, role_type)
-        VALUES (${discordUserId}, ${skillRoleId}, 'skill')
       `;
     }
 
