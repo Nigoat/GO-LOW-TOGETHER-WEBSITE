@@ -25,6 +25,7 @@ const languageRoles: RoleMapping = {
   Rust: process.env.ROLE_RUST!,
   Zig: process.env.ROLE_ZIG!,
   Assembly: process.env.ROLE_ASSEMBLY!,
+  Other: process.env.ROLE_OTHER!,
 };
 
 const skillRoles: RoleMapping = {
