@@ -1,26 +1,9 @@
-/*
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- *
- * Copyright (C) 2026 Go Low Together
- */
-
 "use client";
 
 import { useState } from "react";
 import { Turnstile } from "@marsidev/react-turnstile";
 
-const LANGUAGES = ["C", "C++", "Rust", "Zig", "Assembly"];
+const LANGUAGES = ["C", "C++", "Rust", "Zig", "Assembly", "Other"];
 const SKILL_LEVELS = ["Beginner", "Intermediate", "Advanced", "Wizard"];
 
 interface VerifyFlowProps {
@@ -32,6 +15,7 @@ interface VerifyFlowProps {
 type Step =
   | { type: "turnstile" }
   | { type: "languages" }
+  | { type: "other-input" }
   | { type: "skill"; language: string }
   | { type: "complete" };
 
@@ -42,6 +26,7 @@ export default function VerifyFlow({ token, discordUserId, guildId }: VerifyFlow
   const [turnstileToken, setTurnstileToken] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState("");
+  const [customLanguage, setCustomLanguage] = useState("");
 
   const handleTurnstileSuccess = async (turnstileTokenValue: string) => {
     setTurnstileToken(turnstileTokenValue);
@@ -78,7 +63,21 @@ export default function VerifyFlow({ token, discordUserId, guildId }: VerifyFlow
 
   const handleLanguagesSubmit = () => {
     if (selectedLanguages.length === 0) return;
-    setStep({ type: "skill", language: selectedLanguages[0] });
+    if (selectedLanguages.includes("Other")) {
+      setStep({ type: "other-input" });
+    } else {
+      setStep({ type: "skill", language: selectedLanguages[0] });
+    }
+  };
+
+  const handleOtherInputSubmit = () => {
+    if (!customLanguage.trim()) return;
+    const nonOtherLanguages = selectedLanguages.filter((l) => l !== "Other");
+    if (nonOtherLanguages.length > 0) {
+      setStep({ type: "skill", language: nonOtherLanguages[0] });
+    } else {
+      submitRoles({});
+    }
   };
 
   const handleSkillAnswer = async (level: string) => {
@@ -86,35 +85,44 @@ export default function VerifyFlow({ token, discordUserId, guildId }: VerifyFlow
     const newAnswers = { ...skillAnswers, [currentStep.language]: level };
     setSkillAnswers(newAnswers);
 
-    const currentIndex = selectedLanguages.indexOf(currentStep.language);
-    if (currentIndex < selectedLanguages.length - 1) {
-      setStep({ type: "skill", language: selectedLanguages[currentIndex + 1] });
+    const nonOtherLanguages = selectedLanguages.filter((l) => l !== "Other");
+    const currentIndex = nonOtherLanguages.indexOf(currentStep.language);
+    if (currentIndex < nonOtherLanguages.length - 1) {
+      setStep({ type: "skill", language: nonOtherLanguages[currentIndex + 1] });
     } else {
-      try {
-        await fetch("/api/submit-roles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            discordUserId,
-            guildId,
-            languages: selectedLanguages,
-            skillAnswers: newAnswers,
-          }),
-        });
-      } catch {
-      }
-      setStep({ type: "complete" });
+      submitRoles(newAnswers);
     }
   };
 
-  const currentSkillIndex = step.type === "skill" ? selectedLanguages.indexOf(step.language) : 0;
-  const totalSteps = 1 + selectedLanguages.length;
+  const submitRoles = async (finalSkillAnswers: Record<string, string>) => {
+    try {
+      await fetch("/api/submit-roles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          discordUserId,
+          guildId,
+          languages: selectedLanguages,
+          skillAnswers: finalSkillAnswers,
+        }),
+      });
+    } catch {
+    }
+    setStep({ type: "complete" });
+  };
+
+  const nonOtherLanguages = selectedLanguages.filter((l) => l !== "Other");
+  const hasOther = selectedLanguages.includes("Other");
+  const currentSkillIndex = step.type === "skill" ? nonOtherLanguages.indexOf(step.language) : 0;
+  const totalSteps = 1 + (hasOther ? 1 : 0) + nonOtherLanguages.length;
   const progress = step.type === "turnstile"
     ? 0
     : step.type === "languages"
     ? 1
+    : step.type === "other-input"
+    ? 2
     : step.type === "skill"
-    ? 2 + currentSkillIndex
+    ? (hasOther ? 3 : 2) + currentSkillIndex
     : totalSteps;
 
   if (step.type === "turnstile") {
@@ -190,11 +198,33 @@ export default function VerifyFlow({ token, discordUserId, guildId }: VerifyFlow
         </div>
       )}
 
+      {step.type === "other-input" && (
+        <div className="animate-fadeIn">
+          <h2 className="text-xl font-bold mb-6">What coding language do you know?</h2>
+          <input
+            type="text"
+            value={customLanguage}
+            onChange={(e) => setCustomLanguage(e.target.value)}
+            placeholder="Type your language..."
+            className="w-full p-4 rounded-lg border-2 text-left transition-all outline-none"
+            style={{ borderColor: "#333333", backgroundColor: "#111111", color: "#ffffff" }}
+          />
+          <button
+            onClick={handleOtherInputSubmit}
+            disabled={!customLanguage.trim()}
+            className="w-full mt-6 p-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: customLanguage.trim() ? "#ffffff" : "#333333", color: customLanguage.trim() ? "#000000" : "#888888" }}
+          >
+            Continue
+          </button>
+        </div>
+      )}
+
       {step.type === "skill" && (
         <div className="animate-fadeIn">
           <h2 className="text-xl font-bold mb-2">What is your level in {step.language}?</h2>
           <p className="text-gray-400 mb-6">
-            ({currentSkillIndex + 1} of {selectedLanguages.length})
+            ({currentSkillIndex + 1} of {nonOtherLanguages.length})
           </p>
           <div className="space-y-3">
             {SKILL_LEVELS.map((level) => (
